@@ -43,13 +43,13 @@ export const DescribeImagePlugin: Plugin = async (
     tool: {
       describe_image: tool({
         description:
-          "Get a text description of an image (local file path or http(s) URL) from a vision model. " +
+          "Get a text description of one or more images (local file paths or http(s) URLs) from a vision model. " +
           "Tries providers one at a time in order (Gemini, then Groq, then Cerebras by default), " +
           "trying each provider's models in order, and returns the first successful description.",
         args: {
           image: tool.schema
-            .string()
-            .describe("Local file path (relative to project root or absolute) or an http(s) URL to the image"),
+            .array(tool.schema.string())
+            .describe("One or more local file paths (relative to project root or absolute) or http(s) URLs to images"),
           prompt: tool.schema
             .string()
             .optional()
@@ -66,12 +66,12 @@ export const DescribeImagePlugin: Plugin = async (
             ),
         },
         async execute(args, _context) {
-          const image = await loadImageAsDataUri(args.image);
+          const images = await Promise.all(args.image.map(loadImageAsDataUri));
           const prompt = args.prompt || config.defaultPrompt;
           const order = resolveProviderOrder(args.providers, config.providerOrder.join(","));
           const providers = order.map((id) => registry[id]);
 
-          const result = await describeImageWithFallback(providers, image, prompt);
+          const result = await describeImageWithFallback(providers, images, prompt);
 
           return `${result.text}\n\n_(described by ${result.providerUsed}: ${result.model})_`;
         },

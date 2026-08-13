@@ -4,7 +4,7 @@ const TIMEOUT_MS = 20_000;
 
 /**
  * Calls an OpenAI-compatible /chat/completions endpoint with a single
- * user message containing text + an image_url content block.
+ * user message containing text + image_url content blocks (one per image).
  * Groq and Cerebras both speak this dialect.
  */
 export async function callOpenAiCompatibleVision(opts: {
@@ -12,10 +12,10 @@ export async function callOpenAiCompatibleVision(opts: {
   baseUrl: string; // e.g. "https://api.groq.com/openai/v1"
   apiKey: string;
   model: string;
-  image: ImagePayload;
+  images: ImagePayload[];
   prompt: string;
 }): Promise<string> {
-  const { providerId, baseUrl, apiKey, model, image, prompt } = opts;
+  const { providerId, baseUrl, apiKey, model, images, prompt } = opts;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -36,7 +36,10 @@ export async function callOpenAiCompatibleVision(opts: {
             role: "user",
             content: [
               { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: image.dataUri } },
+              ...images.map((image) => ({
+                type: "image_url",
+                image_url: { url: image.dataUri },
+              })),
             ],
           },
         ],

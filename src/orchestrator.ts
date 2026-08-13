@@ -17,7 +17,7 @@ export interface DescribeResult {
  */
 export async function describeImageWithFallback(
   providers: VisionProvider[],
-  image: ImagePayload,
+  images: ImagePayload[],
   prompt: string
 ): Promise<DescribeResult> {
   const attempts: string[] = [];
@@ -30,7 +30,7 @@ export async function describeImageWithFallback(
 
     for (const model of provider.models) {
       try {
-        const text = await provider.describe(image, prompt, model);
+        const text = await provider.describe(images, prompt, model);
         return { text, providerUsed: provider.label, model };
       } catch (err) {
         const message = err instanceof ProviderError ? err.message : String(err);

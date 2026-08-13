@@ -21,12 +21,12 @@ export interface VisionProvider {
   isConfigured(): boolean;
 
   /**
-   * Send the image + prompt to the provider using the given model and return
+   * Send the images + prompt to the provider using the given model and return
    * the text description. Should throw on any failure (network, auth, rate
    * limit) with a message that includes enough context to show the user
    * (e.g. HTTP status).
    */
-  describe(image: ImagePayload, prompt: string, model: string): Promise<string>;
+  describe(images: ImagePayload[], prompt: string, model: string): Promise<string>;
 }
 
 export class ProviderError extends Error {

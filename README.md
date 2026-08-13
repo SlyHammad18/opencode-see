@@ -10,7 +10,8 @@ fails or isn't configured. Whichever one succeeds first wins.
 
 ## Features
 
-- One `describe_image` tool — point it at a local file or an http(s) URL.
+- One `describe_image` tool — point it at one or more local files or http(s)
+  URLs, sent in a single request.
 - **Free** providers: Gemini, Groq, and Cerebras — no API cost.
 - **One-at-a-time fallback**: tries each provider (and each of its models) in
   order until one succeeds; results are never merged.
@@ -126,6 +127,11 @@ Just ask the OpenCode agent to look at an image:
 > "Describe screenshot.png"
 > "What does the error in ./logs/crash.jpg say?"
 > "Look at https://example.com/diagram.png and explain the architecture"
+> "Compare these two screenshots: after/login.png and after/home.png"
+
+The `image` argument is an array, so the agent passes
+`"image": ["a.png", "b.png"]` for multiple images (a single image is a
+one-element array).
 
 ## Known limits
 

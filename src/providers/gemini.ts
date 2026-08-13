@@ -21,12 +21,11 @@ export class GeminiProvider implements VisionProvider {
     return !!this.apiKey;
   }
 
-  async describe(image: ImagePayload, prompt: string, model: string): Promise<string> {
+  async describe(images: ImagePayload[], prompt: string, model: string): Promise<string> {
     if (!this.apiKey) {
       throw new ProviderError(this.id, "GEMINI_API_KEY is not set");
     }
 
-    const base64 = image.dataUri.split(",")[1] ?? image.dataUri;
     const url = `${API_BASE}/${model}:generateContent?key=${this.apiKey}`;
 
     const controller = new AbortController();
@@ -43,7 +42,12 @@ export class GeminiProvider implements VisionProvider {
             {
               parts: [
                 { text: prompt },
-                { inline_data: { mime_type: image.mimeType, data: base64 } },
+                ...images.map((image) => ({
+                  inline_data: {
+                    mime_type: image.mimeType,
+                    data: image.dataUri.split(",")[1] ?? image.dataUri,
+                  },
+                })),
               ],
             },
           ],

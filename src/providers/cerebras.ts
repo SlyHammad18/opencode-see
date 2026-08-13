@@ -26,7 +26,7 @@ export class CerebrasProvider implements VisionProvider {
     return !!this.apiKey;
   }
 
-  async describe(image: ImagePayload, prompt: string, model: string): Promise<string> {
+  async describe(images: ImagePayload[], prompt: string, model: string): Promise<string> {
     if (!this.apiKey) {
       throw new ProviderError(this.id, "CEREBRAS_API_KEY is not set");
     }
@@ -35,7 +35,7 @@ export class CerebrasProvider implements VisionProvider {
       baseUrl: BASE_URL,
       apiKey: this.apiKey,
       model,
-      image,
+      images,
       prompt,
     });
   }
