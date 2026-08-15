@@ -1,6 +1,6 @@
 # opencode-see
 
-An [OpenCode](https://opencode.ai) plugin that adds a `describe_image` tool.
+An [OpenCode](https://opencode.ai) plugin that adds an `opencode_see` tool.
 It sends an image to a vision-capable LLM and returns a text description,
 falling back across three **free** providers — **Gemini**, **Groq**, and
 **Cerebras** — one at a time, in whatever order you configure.
@@ -10,7 +10,7 @@ fails or isn't configured. Whichever one succeeds first wins.
 
 ## Features
 
-- One `describe_image` tool — point it at one or more local files or http(s)
+- One `opencode_see` tool — point it at one or more local files or http(s)
   URLs, sent in a single request.
 - **Free** providers: Gemini, Groq, and Cerebras — no API cost.
 - **One-at-a-time fallback**: tries each provider (and each of its models) in
@@ -45,8 +45,8 @@ Then add it to `opencode.json`:
 ```
 
 **Or as a local plugin**, copy `dist/plugin.js` into
-`.opencode/plugins/describe-image.js` (project-level) or
-`~/.config/opencode/plugins/describe-image.js` (global).
+`.opencode/plugins/opencode-see.js` (project-level) or
+`~/.config/opencode/plugins/opencode-see.js` (global).
 
 ## 3. Set your keys
 
@@ -106,14 +106,14 @@ Default order is `gemini,groq,cerebras`. Override globally via the
 `providerOrder` plugin option (above) or the env var:
 
 ```bash
-export DESCRIBE_IMAGE_PROVIDER_ORDER="cerebras,gemini,groq"
+export OPENCODE_SEE_PROVIDER_ORDER="cerebras,gemini,groq"
 ```
 
 Or override per-call by passing `providers` as a tool argument (the agent
 can do this itself if you ask, e.g. "describe this image, try cerebras first").
 
 Other settings:
-- `defaultPrompt` plugin option or `DESCRIBE_IMAGE_DEFAULT_PROMPT` env var — default prompt when none is given.
+- `defaultPrompt` plugin option or `OPENCODE_SEE_DEFAULT_PROMPT` env var — default prompt when none is given.
 - `models` plugin option (array of model ids, tried in order) or
   `GEMINI_VISION_MODEL`, `GROQ_VISION_MODEL`, `CEREBRAS_VISION_MODEL` env vars —
   override the model id per provider (useful since Groq in particular rotates
@@ -132,6 +132,10 @@ Just ask the OpenCode agent to look at an image:
 The `image` argument is an array, so the agent passes
 `"image": ["a.png", "b.png"]` for multiple images (a single image is a
 one-element array).
+
+The tool result shows which vision model answered — the output starts with a
+`**Vision model:** <Provider> (<model>)` line followed by the model's
+description (e.g. `**Vision model:** Gemini (gemini-3.1-flash-lite)`).
 
 ## Known limits
 
@@ -158,7 +162,19 @@ Source is in `src/`, one file per provider under `src/providers/`, plus:
 - `image.ts` — loads local files / URLs into a base64 data URI
 - `config.ts` — resolves provider order from args/env/defaults
 - `orchestrator.ts` — the one-at-a-time fallback loop
-- `plugin.ts` — registers the `describe_image` tool with OpenCode
+- `plugin.ts` — registers the `opencode_see` tool with OpenCode
+
+### Publishing
+
+`dist/` is gitignored but shipped to npm via the `files` field. Publish with:
+
+```bash
+npm run build        # build (also runs automatically via prepublishOnly)
+npm publish          # pack and publish
+```
+
+Use `npm publish --dry-run` first to preview exactly what gets packed.
+Bump the version with `npm version patch|minor|major` before each release.
 
 ## License
 

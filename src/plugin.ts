@@ -4,7 +4,7 @@ import {
   loadConfig,
   resolveModels,
   resolveProviderOrder,
-  type DescribeImagePluginOptions,
+  type OpenCodeSeePluginOptions,
   type ProviderId,
 } from "./config.js";
 import { describeImageWithFallback } from "./orchestrator.js";
@@ -14,7 +14,7 @@ import { CerebrasProvider } from "./providers/cerebras.js";
 import type { VisionProvider } from "./providers/types.js";
 
 function buildProviderRegistry(
-  options?: DescribeImagePluginOptions
+  options?: OpenCodeSeePluginOptions
 ): Record<ProviderId, VisionProvider> {
   return {
     gemini: new GeminiProvider(
@@ -32,16 +32,16 @@ function buildProviderRegistry(
   };
 }
 
-export const DescribeImagePlugin: Plugin = async (
+export const OpenCodeSeePlugin: Plugin = async (
   { directory },
   options?: PluginOptions
 ) => {
-  const config = loadConfig(options as DescribeImagePluginOptions | undefined);
-  const registry = buildProviderRegistry(options as DescribeImagePluginOptions | undefined);
+  const config = loadConfig(options as OpenCodeSeePluginOptions | undefined);
+  const registry = buildProviderRegistry(options as OpenCodeSeePluginOptions | undefined);
 
   return {
     tool: {
-      describe_image: tool({
+      opencode_see: tool({
         description:
           "Get a text description of one or more images (local file paths or http(s) URLs) from a vision model. " +
           "Tries providers one at a time in order (Gemini, then Groq, then Cerebras by default), " +
@@ -73,11 +73,15 @@ export const DescribeImagePlugin: Plugin = async (
 
           const result = await describeImageWithFallback(providers, images, prompt);
 
-          return `${result.text}\n\n_(described by ${result.providerUsed}: ${result.model})_`;
+          return {
+            title: `Vision: ${result.providerUsed} (${result.model})`,
+            output: `**Vision model:** ${result.providerUsed} (${result.model})\n\n${result.text}`,
+            metadata: { provider: result.providerUsed, model: result.model },
+          };
         },
       }),
     },
   };
 };
 
-export default DescribeImagePlugin;
+export default OpenCodeSeePlugin;

@@ -2,7 +2,7 @@
 
 ## Project
 
-OpenCode plugin `opencode-see`: registers a `describe_image` tool that sends an image (local path or http(s) URL) to a vision LLM and falls back one-at-a-time across **Gemini → Groq → Cerebras** (order configurable). Success comes from the first provider that works; outputs are never merged.
+OpenCode plugin `opencode-see`: registers an `opencode_see` tool that sends an image (local path or http(s) URL) to a vision LLM and falls back one-at-a-time across **Gemini → Groq → Cerebras** (order configurable). Success comes from the first provider that works; outputs are never merged.
 
 ## Commands
 
@@ -12,8 +12,8 @@ OpenCode plugin `opencode-see`: registers a `describe_image` tool that sends an 
 
 ## Layout
 
-- `src/plugin.ts` — entrypoint. Registers the `describe_image` tool; here is where providers are wired in `buildProviderRegistry`. Any new provider must implement `VisionProvider` and be registered here.
-- `src/config.ts` — resolves provider order and default prompt (tool arg > `DESCRIBE_IMAGE_PROVIDER_ORDER` > default).
+- `src/plugin.ts` — entrypoint. Registers the `opencode_see` tool; here is where providers are wired in `buildProviderRegistry`. Any new provider must implement `VisionProvider` and be registered here.
+- `src/config.ts` — resolves provider order and default prompt (tool arg > `OPENCODE_SEE_PROVIDER_ORDER` > default).
 - `src/orchestrator.ts` — the one-at-a-time fallback loop (`describeImageWithFallback`).
 - `src/image.ts` — loads local files / URLs into a base64 data URI (mime guessed from extension).
 - `src/providers/gemini.ts` — direct Gemini REST call.
@@ -22,7 +22,7 @@ OpenCode plugin `opencode-see`: registers a `describe_image` tool that sends an 
 ## Conventions & gotchas
 
 - ESM (`"type": "module"`). Relative imports keep `.js` extensions (e.g. `./image.js`) even though `tsconfig` uses `moduleResolution: "Bundler"`.
-- Config comes from opencode.json plugin options (`apiKeys`, `models`, `providerOrder`, `defaultPrompt`) and/or env vars only (no dotenv): `GEMINI_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`; model overrides `*_VISION_MODEL`; `DESCRIBE_IMAGE_PROVIDER_ORDER`; `DESCRIBE_IMAGE_DEFAULT_PROMPT`. Precedence: tool arg > plugin option > env var > default. A provider without its key is skipped, not errored.
+- Config comes from opencode.json plugin options (`apiKeys`, `models`, `providerOrder`, `defaultPrompt`) and/or env vars only (no dotenv): `GEMINI_API_KEY`, `GROQ_API_KEY`, `CEREBRAS_API_KEY`; model overrides `*_VISION_MODEL`; `OPENCODE_SEE_PROVIDER_ORDER`; `OPENCODE_SEE_DEFAULT_PROMPT`. Precedence: tool arg > plugin option > env var > default. A provider without its key is skipped, not errored.
 - Each provider holds an ordered `models: string[]` list; the orchestrator tries each (provider, model) pair one at a time — see `resolveModels` in `src/config.ts` and the nested loop in `src/orchestrator.ts`.
 - Provider failures should throw `ProviderError` (see `src/providers/types.ts`); the orchestrator then moves to the next provider.
 - All provider HTTP calls use a 20s timeout via `AbortController` — keep this when adding providers.

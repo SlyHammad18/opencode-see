@@ -10,7 +10,7 @@ const DEFAULT_PROMPT = "Describe this image in detail.";
  *
  * Every field is optional; each falls back to the matching env var when unset.
  */
-export interface DescribeImagePluginOptions {
+export interface OpenCodeSeePluginOptions {
   apiKeys?: Partial<Record<ProviderId, string>>;
   /** Ordered list of models to try per provider, e.g. { "groq": ["a", "b"] } */
   models?: Partial<Record<ProviderId, string[]>>;
@@ -19,7 +19,7 @@ export interface DescribeImagePluginOptions {
   defaultPrompt?: string;
 }
 
-export interface DescribeImageConfig {
+export interface OpenCodeSeeConfig {
   providerOrder: ProviderId[];
   defaultPrompt: string;
 }
@@ -28,7 +28,7 @@ export interface DescribeImageConfig {
  * Resolves the provider order, in priority:
  * 1. Explicit override passed to the tool call (args.providers)
  * 2. Plugin option (opencode.json providerOrder)
- * 3. DESCRIBE_IMAGE_PROVIDER_ORDER env var
+ * 3. OPENCODE_SEE_PROVIDER_ORDER env var
  * 4. Built-in default: gemini, groq, cerebras
  *
  * Unknown provider ids are ignored with a console warning rather than
@@ -38,7 +38,7 @@ export function resolveProviderOrder(
   overrideCsv?: string,
   configuredCsv?: string
 ): ProviderId[] {
-  const source = overrideCsv || configuredCsv || process.env.DESCRIBE_IMAGE_PROVIDER_ORDER;
+  const source = overrideCsv || configuredCsv || process.env.OPENCODE_SEE_PROVIDER_ORDER;
   if (!source) return DEFAULT_ORDER;
 
   const requested = source
@@ -51,7 +51,7 @@ export function resolveProviderOrder(
 
   if (invalid.length) {
     console.warn(
-      `[describe_image] ignoring unknown provider id(s): ${invalid.join(", ")}. ` +
+      `[opencode_see] ignoring unknown provider id(s): ${invalid.join(", ")}. ` +
         `Valid ids: ${ALL_PROVIDERS.join(", ")}`
     );
   }
@@ -59,12 +59,12 @@ export function resolveProviderOrder(
   return valid.length ? valid : DEFAULT_ORDER;
 }
 
-export function loadConfig(options?: DescribeImagePluginOptions): DescribeImageConfig {
+export function loadConfig(options?: OpenCodeSeePluginOptions): OpenCodeSeeConfig {
   return {
     providerOrder: resolveProviderOrder(undefined, options?.providerOrder),
     defaultPrompt:
       options?.defaultPrompt ||
-      process.env.DESCRIBE_IMAGE_DEFAULT_PROMPT ||
+      process.env.OPENCODE_SEE_DEFAULT_PROMPT ||
       DEFAULT_PROMPT,
   };
 }
@@ -89,7 +89,7 @@ const DEFAULT_MODELS: Record<ProviderId, string[]> = {
  */
 export function resolveModels(
   provider: ProviderId,
-  options?: DescribeImagePluginOptions
+  options?: OpenCodeSeePluginOptions
 ): string[] {
   const fromOptions = options?.models?.[provider];
   if (fromOptions && fromOptions.length) {
