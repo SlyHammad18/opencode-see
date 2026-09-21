@@ -1,4 +1,3 @@
-import { tool, type Plugin, type PluginOptions } from "@opencode-ai/plugin";
 import { loadImageAsDataUri } from "./image.js";
 import {
   loadConfig,
@@ -12,6 +11,11 @@ import { GeminiProvider } from "./providers/gemini.js";
 import { GroqProvider } from "./providers/groq.js";
 import { CerebrasProvider } from "./providers/cerebras.js";
 import type { VisionProvider } from "./providers/types.js";
+
+const TOOL_DESCRIPTION =
+  "Get a text description of one or more images (local file paths or http(s) URLs) from a vision model. " +
+  "Tries providers one at a time in order (Gemini, then Groq, and Cerebras by default), " +
+  "trying each provider's models in order, and returns the first successful description.";
 
 function buildProviderRegistry(
   options?: OpenCodeSeePluginOptions
@@ -32,24 +36,114 @@ function buildProviderRegistry(
   };
 }
 
-export const OpenCodeSeePlugin: Plugin = async (
-  { directory },
-  options?: PluginOptions
-) => {
-  const config = loadConfig(options as OpenCodeSeePluginOptions | undefined);
-  const registry = buildProviderRegistry(options as OpenCodeSeePluginOptions | undefined);
+/** Shared core: load images, resolve config, call orchestrator, format result. */
+async function executeVision(
+  imagePaths: string[],
+  promptOverride: string | undefined,
+  providersOverride: string | undefined,
+  config: { defaultPrompt: string; providerOrder: ProviderId[] },
+  registry: Record<ProviderId, VisionProvider>
+): Promise<{ title: string; output: string; providerUsed: string; model: string }> {
+  const images = await Promise.all(imagePaths.map(loadImageAsDataUri));
+  const prompt = promptOverride || config.defaultPrompt;
+  const order = resolveProviderOrder(providersOverride, config.providerOrder.join(","));
+  const providers = order.map((id) => registry[id]);
+
+  const result = await describeImageWithFallback(providers, images, prompt);
+
+  return {
+    title: `Vision: ${result.providerUsed} (${result.model})`,
+    output: `**Vision model:** ${result.providerUsed} (${result.model})\n\n${result.text}`,
+    providerUsed: result.providerUsed,
+    model: result.model,
+  };
+}
+
+function createPluginState(options?: OpenCodeSeePluginOptions) {
+  const config = loadConfig(options);
+  const registry = buildProviderRegistry(options);
+  return { config, registry };
+}
+
+// ---------------------------------------------------------------------------
+// V2 plugin (OpenCode V2) — via setup()
+// ---------------------------------------------------------------------------
+
+async function v2Setup(ctx: {
+  options: Record<string, unknown>;
+  tool: {
+    transform: (cb: (editor: { add: (tool: unknown) => void }) => void) => Promise<unknown>;
+  };
+}) {
+  const pluginOpts = ctx.options as OpenCodeSeePluginOptions | undefined;
+  const { config, registry } = createPluginState(pluginOpts);
+
+  await ctx.tool.transform((editor) => {
+    editor.add({
+      name: "opencode_see",
+      description: TOOL_DESCRIPTION,
+      input: {
+        type: "object",
+        properties: {
+          image: {
+            type: "array",
+            items: { type: "string" },
+            description:
+              "One or more local file paths (relative to project root or absolute) or http(s) URLs to images",
+          },
+          prompt: {
+            type: "string",
+            description:
+              "What to focus on, e.g. 'describe the UI layout' or 'read the error text'. " +
+              "Defaults to a general description.",
+          },
+          providers: {
+            type: "string",
+            description:
+              "Optional comma-separated provider order override for this call only, e.g. 'cerebras,gemini'. " +
+              "Valid ids: gemini, groq, cerebras.",
+          },
+        },
+        required: ["image"],
+        additionalProperties: false,
+      },
+      async execute(input: unknown, _context: unknown) {
+        const args = input as { image: string[]; prompt?: string; providers?: string };
+        const result = await executeVision(
+          args.image,
+          args.prompt,
+          args.providers,
+          config,
+          registry
+        );
+        return { content: result.output };
+      },
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// V1 plugin (OpenCode V1) — via server()
+// ---------------------------------------------------------------------------
+
+async function v1Server(
+  _context: { directory: string; project?: unknown; client?: unknown },
+  options?: Record<string, unknown>
+) {
+  const { tool } = await import("@opencode-ai/plugin");
+  const pluginOpts = options as OpenCodeSeePluginOptions | undefined;
+  const { config, registry } = createPluginState(pluginOpts);
 
   return {
     tool: {
       opencode_see: tool({
-        description:
-          "Get a text description of one or more images (local file paths or http(s) URLs) from a vision model. " +
-          "Tries providers one at a time in order (Gemini, then Groq, then Cerebras by default), " +
-          "trying each provider's models in order, and returns the first successful description.",
+        description: TOOL_DESCRIPTION,
         args: {
           image: tool.schema
             .array(tool.schema.string())
-            .describe("One or more local file paths (relative to project root or absolute) or http(s) URLs to images"),
+            .describe(
+              "One or more local file paths (relative to project root or absolute) or http(s) URLs to images"
+            ),
           prompt: tool.schema
             .string()
             .optional()
@@ -65,23 +159,34 @@ export const OpenCodeSeePlugin: Plugin = async (
                 "Valid ids: gemini, groq, cerebras."
             ),
         },
-        async execute(args, _context) {
-          const images = await Promise.all(args.image.map(loadImageAsDataUri));
-          const prompt = args.prompt || config.defaultPrompt;
-          const order = resolveProviderOrder(args.providers, config.providerOrder.join(","));
-          const providers = order.map((id) => registry[id]);
-
-          const result = await describeImageWithFallback(providers, images, prompt);
-
+        async execute(
+          args: { image: string[]; prompt?: string; providers?: string },
+          _context: unknown
+        ) {
+          const result = await executeVision(
+            args.image,
+            args.prompt,
+            args.providers,
+            config,
+            registry
+          );
           return {
-            title: `Vision: ${result.providerUsed} (${result.model})`,
-            output: `**Vision model:** ${result.providerUsed} (${result.model})\n\n${result.text}`,
+            title: result.title,
+            output: result.output,
             metadata: { provider: result.providerUsed, model: result.model },
           };
         },
       }),
     },
   };
-};
+}
 
-export default OpenCodeSeePlugin;
+// ---------------------------------------------------------------------------
+// Dual export: V2 via id+setup, V1 via server()
+// ---------------------------------------------------------------------------
+
+export default {
+  id: "opencode-see",
+  setup: v2Setup,
+  server: v1Server,
+};

@@ -1,7 +1,7 @@
 {
   "name": "opencode-see",
-  "version": "1.0.0",
-  "description": "OpenCode plugin: describe images using free Gemini, Groq, and Cerebras vision models with configurable fallback order.",
+  "version": "2.0.0",
+  "description": "OpenCode plugin: describe images using free Gemini, Groq, and Cerebras vision models with configurable fallback order. Compatible with OpenCode V1 and V2.",
   "type": "module",
   "main": "dist/plugin.js",
   "types": "dist/plugin.d.ts",
@@ -34,7 +34,7 @@
     "@opencode-ai/plugin": "^1.18.16"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.8.0",
+    "@types/node": "^24.0.0"
   }
 }

@@ -4,6 +4,8 @@
 
 OpenCode plugin `opencode-see`: registers an `opencode_see` tool that sends an image (local path or http(s) URL) to a vision LLM and falls back one-at-a-time across **Gemini → Groq → Cerebras** (order configurable). Success comes from the first provider that works; outputs are never merged.
 
+**Compatible with both OpenCode V1 and V2** via a dual-export pattern: the default export includes V2's `setup()` (via `Plugin.define`) and a V1 `server()` function.
+
 ## Commands
 
 - `npm install` — required first; repo has no committed `node_modules`.
@@ -12,7 +14,7 @@ OpenCode plugin `opencode-see`: registers an `opencode_see` tool that sends an i
 
 ## Layout
 
-- `src/plugin.ts` — entrypoint. Registers the `opencode_see` tool; here is where providers are wired in `buildProviderRegistry`. Any new provider must implement `VisionProvider` and be registered here.
+- `src/plugin.ts` — entrypoint. Dual-export: V2 path uses `Plugin.define` + `ctx.tool.transform`, V1 path uses `server()` returning the V1 `tool()` helper. Both call the shared `executeVision()` helper. Providers are wired in `buildProviderRegistry`. Any new provider must implement `VisionProvider` and be registered there.
 - `src/config.ts` — resolves provider order and default prompt (tool arg > `OPENCODE_SEE_PROVIDER_ORDER` > default).
 - `src/orchestrator.ts` — the one-at-a-time fallback loop (`describeImageWithFallback`).
 - `src/image.ts` — loads local files / URLs into a base64 data URI (mime guessed from extension).
@@ -27,3 +29,11 @@ OpenCode plugin `opencode-see`: registers an `opencode_see` tool that sends an i
 - Provider failures should throw `ProviderError` (see `src/providers/types.ts`); the orchestrator then moves to the next provider.
 - All provider HTTP calls use a 20s timeout via `AbortController` — keep this when adding providers.
 - External quirks (see README): Groq rotates vision model ids (set `GROQ_VISION_MODEL` if the default goes stale); Cerebras caps images at 280 tokens.
+
+## V1 + V2 compatibility
+
+- **V2 path**: `Plugin.define({ id, setup(ctx) { ctx.tool.transform(...) } })` — tool input uses JSON Schema, execute returns `{ content }`.
+- **V1 path**: `server()` function returning the V1 `tool()` helper result — tool input uses `tool.schema.*`, execute returns `{ title, output, metadata }`.
+- Both paths share `executeVision()` which handles config loading, provider orchestration, and result formatting.
+- Dependencies: `@opencode/plugin` (V2) and `@opencode-ai/plugin` (V1).
+- Config syntax differs: V2 uses `"plugins": [...]` with `{ "package": ..., "options": {...} }`, V1 uses `"plugin": [...]` with tuple `[name, opts]`.
