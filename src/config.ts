@@ -1,7 +1,7 @@
-export type ProviderId = "gemini" | "groq" | "cerebras";
+export type ProviderId = "gemini" | "groq" | "cerebras" | "openrouter";
 
-const ALL_PROVIDERS: ProviderId[] = ["gemini", "groq", "cerebras"];
-const DEFAULT_ORDER: ProviderId[] = ["gemini", "groq", "cerebras"];
+const ALL_PROVIDERS: ProviderId[] = ["gemini", "groq", "cerebras", "openrouter"];
+const DEFAULT_ORDER: ProviderId[] = ["gemini", "groq", "cerebras", "openrouter"];
 const DEFAULT_PROMPT = "Describe this image in detail.";
 
 /**
@@ -73,12 +73,18 @@ const MODEL_ENV_VARS: Record<ProviderId, string> = {
   gemini: "GEMINI_VISION_MODEL",
   groq: "GROQ_VISION_MODEL",
   cerebras: "CEREBRAS_VISION_MODEL",
+  openrouter: "OPENROUTER_VISION_MODEL",
 };
 
 const DEFAULT_MODELS: Record<ProviderId, string[]> = {
   gemini: ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-3.1-flash-lite"],
   groq: ["qwen/qwen3.6-27b"],
   cerebras: ["gemma-4-31b"],
+  openrouter: [
+    "inclusionai/ling-3.0-flash-vl:free",
+    "qwen/qwen-2.5-vl-72b-instruct:free",
+    "google/gemma-3-27b-it:free",
+  ],
 };
 
 /**

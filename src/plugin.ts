@@ -12,11 +12,12 @@ import { describeImageWithFallback } from "./orchestrator.js";
 import { GeminiProvider } from "./providers/gemini.js";
 import { GroqProvider } from "./providers/groq.js";
 import { CerebrasProvider } from "./providers/cerebras.js";
+import { OpenRouterProvider } from "./providers/openrouter.js";
 import type { VisionProvider } from "./providers/types.js";
 
 const TOOL_DESCRIPTION =
   "Get a text description of one or more images (local file paths or http(s) URLs) from a vision model. " +
-  "Tries providers one at a time in order (Gemini, then Groq, and Cerebras by default), " +
+  "Tries providers one at a time in order (Gemini, Groq, Cerebras, and OpenRouter by default), " +
   "trying each provider's models in order, and returns the first successful description.";
 
 function buildProviderRegistry(
@@ -34,6 +35,10 @@ function buildProviderRegistry(
     cerebras: new CerebrasProvider(
       options?.apiKeys?.cerebras,
       resolveModels("cerebras", options)
+    ),
+    openrouter: new OpenRouterProvider(
+      options?.apiKeys?.openrouter,
+      resolveModels("openrouter", options)
     ),
   };
 }
@@ -98,7 +103,7 @@ async function v2Setup(ctx: Context) {
             type: "string",
             description:
               "Optional comma-separated provider order override for this call only, e.g. 'cerebras,gemini'. " +
-              "Valid ids: gemini, groq, cerebras.",
+              "Valid ids: gemini, groq, cerebras, openrouter.",
           },
         },
         required: ["image"],
