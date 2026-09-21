@@ -16,9 +16,10 @@ import { OpenRouterProvider } from "./providers/openrouter.js";
 import type { VisionProvider } from "./providers/types.js";
 
 const TOOL_DESCRIPTION =
-  "Get a text description of one or more images (local file paths or http(s) URLs) from a vision model. " +
+  "Get a text description of one or more images (local file paths, http(s) URLs, or data URIs from pasted clipboard images) from a vision model. " +
   "Tries providers one at a time in order (Gemini, Groq, Cerebras, and OpenRouter by default), " +
-  "trying each provider's models in order, and returns the first successful description.";
+  "trying each provider's models in order, and returns the first successful description. " +
+  "When the user pastes an image from clipboard, pass the data:image/... URI directly as an image value.";
 
 function buildProviderRegistry(
   options?: OpenCodeSeePluginOptions
@@ -91,7 +92,8 @@ async function v2Setup(ctx: Context) {
             type: "array",
             items: { type: "string" },
             description:
-              "One or more local file paths (relative to project root or absolute) or http(s) URLs to images",
+              "One or more local file paths (relative to project root or absolute), http(s) URLs, " +
+              "or data URIs (e.g. data:image/png;base64,... from pasted clipboard images)",
           },
           prompt: {
             type: "string",
@@ -144,7 +146,8 @@ async function v1Server(
           image: tool.schema
             .array(tool.schema.string())
             .describe(
-              "One or more local file paths (relative to project root or absolute) or http(s) URLs to images"
+              "One or more local file paths (relative to project root or absolute), http(s) URLs, " +
+                "or data URIs (e.g. data:image/png;base64,... from pasted clipboard images)"
             ),
           prompt: tool.schema
             .string()

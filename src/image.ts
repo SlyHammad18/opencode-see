@@ -15,10 +15,22 @@ function guessMimeType(pathOrUrl: string): string {
 }
 
 /**
- * Loads an image from a local file path or an http(s) URL and returns
- * it as a base64 data URI, ready to hand to any provider.
+ * Loads an image from a local file path, an http(s) URL, or a data URI
+ * and returns it as a base64 data URI, ready to hand to any provider.
  */
 export async function loadImageAsDataUri(pathOrUrl: string): Promise<ImagePayload> {
+  // Handle data: URIs directly (e.g. from pasted clipboard images)
+  if (pathOrUrl.startsWith("data:")) {
+    const match = pathOrUrl.match(/^data:([^;]+);base64,(.+)$/s);
+    if (!match) {
+      throw new Error(
+        `Invalid data URI (expected "data:<mime>;base64,<payload>"): ${pathOrUrl.slice(0, 80)}...`
+      );
+    }
+    const mimeType = match[1];
+    return { dataUri: pathOrUrl, mimeType };
+  }
+
   const isUrl = /^https?:\/\//i.test(pathOrUrl);
   const mimeType = guessMimeType(pathOrUrl);
 
