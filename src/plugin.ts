@@ -1,3 +1,5 @@
+import { Plugin } from "@opencode/plugin";
+import type { Context } from "@opencode/plugin/promise/plugin";
 import { loadImageAsDataUri } from "./image.js";
 import {
   loadConfig,
@@ -66,15 +68,10 @@ function createPluginState(options?: OpenCodeSeePluginOptions) {
 }
 
 // ---------------------------------------------------------------------------
-// V2 plugin (OpenCode V2) — via setup()
+// V2 plugin (OpenCode V2) — via Plugin.define()
 // ---------------------------------------------------------------------------
 
-async function v2Setup(ctx: {
-  options: Record<string, unknown>;
-  tool: {
-    transform: (cb: (editor: { add: (tool: unknown) => void }) => void) => Promise<unknown>;
-  };
-}) {
+async function v2Setup(ctx: Context) {
   const pluginOpts = ctx.options as OpenCodeSeePluginOptions | undefined;
   const { config, registry } = createPluginState(pluginOpts);
 
@@ -182,11 +179,16 @@ async function v1Server(
 }
 
 // ---------------------------------------------------------------------------
-// Dual export: V2 via id+setup, V1 via server()
+// V2 export: Plugin.define()
 // ---------------------------------------------------------------------------
 
-export default {
+export default Plugin.define({
   id: "opencode-see",
   setup: v2Setup,
-  server: v1Server,
-};
+});
+
+// ---------------------------------------------------------------------------
+// V1 export: server() function (named export for backward compat)
+// ---------------------------------------------------------------------------
+
+export { v1Server as server };
